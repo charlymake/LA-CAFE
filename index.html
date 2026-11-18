@@ -475,6 +475,29 @@ a{color:inherit;text-decoration:none;}
 
 /* ═══ PRINT TICKET FALLBACK ═══ */
 #lilo-print{display:none;}
+
+/* ═══ Samsung Galaxy Tab A9+ (11", 1280×800 horizontal / 800×1280 vertical) ═══ */
+.qty-btn{min-width:36px;min-height:36px;font-size:18px;}
+.brand-tab{min-height:42px;}
+.brand-tabs{flex-wrap:nowrap;}
+.brand-tabs>*{flex-shrink:0;}
+.nav-item{min-height:46px;}
+html,body{overscroll-behavior:none;}
+*{-webkit-tap-highlight-color:transparent;}
+@media(min-width:1180px) and (max-width:1440px){
+  .pos-right{width:330px;}
+  .product-grid{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:10px;}
+  .product-card{min-height:96px;}
+}
+@media(min-width:700px) and (max-width:900px) and (orientation:portrait){
+  .pos-right{width:290px;}
+  .brand-tabs{padding:12px 10px;gap:4px;}
+  .brand-tab{padding:8px 11px!important;font-size:12px!important;}
+  .brand-tabs button[onclick*='_liloGasto']{padding:8px 11px!important;font-size:12px!important;}
+  .product-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px;}
+  .product-card{min-height:96px;}
+}
+@media(display-mode:standalone){.topbar{padding-top:env(safe-area-inset-top);}}
 @media print{
   #app{display:none!important;}
   #lilo-print{display:block!important;}
