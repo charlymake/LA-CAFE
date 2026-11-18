@@ -4220,6 +4220,20 @@ async function init(){
   scheduleMidnightCorte();
 }
 window.addEventListener('DOMContentLoaded',init);
+
+// Pantalla completa: oculta las barras de Android en la tablet.
+// Se activa con el primer toque (el navegador lo exige) y se recupera al volver a la app.
+(function(){
+  const isFull=()=>document.fullscreenElement||document.webkitFullscreenElement||matchMedia('(display-mode: fullscreen)').matches;
+  const go=()=>{
+    if(isFull())return;
+    const el=document.documentElement;
+    const req=el.requestFullscreen||el.webkitRequestFullscreen;
+    if(req){try{const r=req.call(el,{navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{});}catch(_){}}
+  };
+  document.addEventListener('pointerdown',go,{passive:true});
+  document.addEventListener('touchend',go,{passive:true});
+})();
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();window._liloInstallEvt=e;
   if(!S.user)render(renderLogin());

@@ -5,7 +5,7 @@
   "id": "./",
   "start_url": "./",
   "scope": "./",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "any",
   "background_color": "#0D0D0D",
   "theme_color": "#000000",
@@ -32,6 +32,7 @@
   ],
   "prefer_related_applications": false,
   "display_override": [
+    "fullscreen",
     "standalone"
   ]
 }
