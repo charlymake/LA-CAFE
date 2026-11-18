@@ -3364,6 +3364,9 @@ async function handleClick(e){
     case 'select-user':{
       const u=S.users.find(x=>x.id==id);
       if(!u)return;
+      // Perfil OPERACIONES (o cualquier usuario sin PIN) entra directo, sin contraseña
+      const _nm=String(u.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+      if(_nm==='operaciones'||!String(u.pin||'').trim()){S.loginUser=null;S.pinBuffer='';await doLogin(u);break;}
       S.loginUser=u;S.pinBuffer='';
       render(renderLogin());
       break;
