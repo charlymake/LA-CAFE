@@ -1425,7 +1425,7 @@ function renderAbrirMesaModal(){
         <div class="modal-mesa-nombres">
           ${opciones.map(n=>{const ocupada=mesasOcupadas.includes(n);return`<button class="btn-mesa-nombre${S.mesaNombreTmp===n?' active':''}${ocupada?' disabled':''}" data-action="sel-mesa-nombre" data-nombre="${n}"${ocupada?' disabled title="Ocupada"':''}>${n}${ocupada?' 🔴':''}</button>`;}).join('')}
         </div>
-        <input id="mesa-nombre-input" class="modal-input" type="text" placeholder="Nombre personalizado…" value="${esc(S.mesaNombreTmp)}" style="margin-bottom:14px;" data-action="mesa-nombre-input" maxlength="30">
+        <input id="mesa-nombre-input" class="modal-input" type="text" onfocus="window._rocaMesaClear(this)" placeholder="Nombre personalizado…" value="${esc(S.mesaNombreTmp)}" style="margin-bottom:14px;" data-action="mesa-nombre-input" maxlength="30">
         <button class="btn-primary" style="width:100%;padding:13px;" data-action="confirmar-abrir-mesa"${!S.mesaNombreTmp.trim()?' disabled':''}>
           Abrir Mesa
         </button>
@@ -4235,6 +4235,12 @@ async function init(){
 window.addEventListener('DOMContentLoaded',init);
 
 
+
+// Al tocar el recuadro del nombre de mesa se borra lo escrito y se quita la mesa seleccionada
+window._rocaMesaClear=function(inp){
+  inp.value='';S.mesaNombreTmp='';
+  document.querySelectorAll('.btn-mesa-nombre.active').forEach(b=>b.classList.remove('active'));
+};
 // Teclado en pantalla: medir el espacio visible y mantener a la vista el campo donde se escribe
 (function(){
   const vv=window.visualViewport;
