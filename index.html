@@ -486,8 +486,8 @@ input::placeholder,textarea::placeholder{color:var(--t3);}
 /* Teclado en pantalla: el recuadro se acomoda en el espacio visible arriba del teclado */
 .modal-overlay{top:0;bottom:auto;height:var(--vvh,100dvh);}
 .modal{max-height:calc(var(--vvh,100dvh) - 24px);}
-html.kb-open .modal-overlay{align-items:flex-start;padding-top:12px;padding-bottom:12px;}
-html.kb-open .modal{max-height:min(calc(var(--vvh,100dvh) - 24px),calc(50dvh - 16px));}
+html.kb-open .modal-overlay{height:var(--avail,50dvh);align-items:center;padding-top:8px;padding-bottom:8px;}
+html.kb-open .modal{max-height:calc(var(--avail,50dvh) - 16px);}
 /* Teclado de PIN a la medida de la tablet */
 .login-screen.pin-mode{height:100dvh;min-height:0;overflow:hidden;}
 .login-screen.pin-mode .login-card{max-width:400px;padding:clamp(16px,3vh,28px);}
@@ -4238,9 +4238,17 @@ window.addEventListener('DOMContentLoaded',init);
 // Teclado en pantalla: medir el espacio visible y mantener a la vista el campo donde se escribe
 (function(){
   const vv=window.visualViewport;
+  let base=0;
   const upd=()=>{
     const h=vv?vv.height:window.innerHeight;
-    document.documentElement.style.setProperty('--vvh',h+'px');
+    const r=document.documentElement;
+    r.style.setProperty('--vvh',h+'px');
+    const typing=r.classList.contains('kb-open');
+    if(!typing||h>base)base=Math.max(base,h);
+    if(!typing)base=h;
+    // Si la pantalla se encogió por el teclado, usamos ese alto; si no avisó (pantalla completa), usamos la mitad de arriba
+    const avail=(typing&&h>base*0.8)?Math.round(base*0.52):h;
+    r.style.setProperty('--avail',avail+'px');
   };
   if(vv){vv.addEventListener('resize',upd);vv.addEventListener('scroll',upd);}
   window.addEventListener('resize',upd);upd();
@@ -4248,7 +4256,7 @@ window.addEventListener('DOMContentLoaded',init);
   document.addEventListener('focusin',e=>{
     const t=e.target;if(!isText(t))return;
     // En pantalla completa Android no avisa que abrió el teclado: subimos la ventana siempre que se escribe
-    document.documentElement.classList.add('kb-open');
+    document.documentElement.classList.add('kb-open');upd();
     setTimeout(()=>{upd();try{t.scrollIntoView({block:'center',behavior:'smooth'});}catch(_){}},300);
   });
   document.addEventListener('focusout',()=>setTimeout(()=>{if(!isText(document.activeElement))document.documentElement.classList.remove('kb-open');upd();},250));
