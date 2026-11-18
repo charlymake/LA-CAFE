@@ -1220,7 +1220,7 @@ function renderPOS(){
     </div>
     <div class="pos-right">
       <div class="cart-header">
-        <span class="cart-title">Orden ${cartCount>0?`(${cartCount})`:'—'}</span>
+        <span class="cart-title">${S.mesaAgregarTarget?`➕ Agregar a ${esc(S.mesaAgregarTarget.nombre)}`:'Orden'} ${cartCount>0?`(${cartCount})`:'—'}</span>
         ${cartCount>0?`<button class="cart-clear" data-action="clear-cart">Limpiar</button>`:''}
       </div>
       <div class="cart-items">
@@ -1245,6 +1245,11 @@ function renderPOS(){
           <span class="cart-total-label">${discount>0?'<span style="font-size:11px;text-decoration:line-through;color:var(--t3);">'+fmt(cartTotal)+'</span> Total':'Total'}</span>
           <span class="cart-total-amount">${fmt(finalTotal)}</span>
         </div>
+        ${S.mesaAgregarTarget?`
+        <button class="btn-checkout" data-action="mesa-sumar-carrito"${S.cart.length===0?' disabled':''}>
+          ➕ Sumar a ${esc(S.mesaAgregarTarget.nombre)} ${cartCount>0?fmt(cartTotal):''}
+        </button>
+        <button class="btn-secondary" style="width:100%;margin-top:6px;padding:11px;" data-action="mesa-agregar-cancelar">Cancelar y volver a la mesa</button>`:`
         <div style="display:flex;gap:6px;margin-bottom:8px;">
           <button class="btn-secondary" style="flex:1;padding:8px;font-size:12px;" data-action="open-discount-picker">🏷️ Descuento</button>
           ${S.appliedDiscount?`<button class="btn-secondary" style="padding:8px 10px;font-size:12px;color:var(--danger);" data-action="remove-discount">✕</button>`:''}
@@ -1254,7 +1259,7 @@ function renderPOS(){
         </button>
         <button class="btn-abrir-mesa" data-action="open-abrir-mesa-modal"${S.cart.length===0?' disabled':''}>
           🪑 Abrir Mesa
-        </button>
+        </button>`}
       </div>
     </div>
   </div>
@@ -3736,9 +3741,34 @@ async function handleClick(e){
       render(renderShell(renderMesaDetalle()));bindEvents();break;
     }
     case 'open-mesa-agregar':
-      S.mesaAgregarOpen=true;
-      render(renderShell(renderMesaDetalle())+renderAgregarProductosMesaModal());
-      bindEvents();break;
+      // Va a la Caja para escoger productos; al terminar se suman a la mesa
+      if(!S.mesaActiva)return;
+      S.mesaAgregarTarget={id:S.mesaActiva.id,nombre:S.mesaActiva.nombre};
+      S._cartBak={cart:S.cart,disc:S.appliedDiscount};
+      S.cart=[];S.appliedDiscount=null;S.searchQuery='';
+      await navigateTo('pos');break;
+    case 'mesa-agregar-cancelar':{
+      const t=S.mesaAgregarTarget;S.mesaAgregarTarget=null;
+      if(S._cartBak){S.cart=S._cartBak.cart||[];S.appliedDiscount=S._cartBak.disc||null;S._cartBak=null;}
+      _liloSaveCart();
+      if(t){const m=await db.mesas.get(t.id);if(m&&m.status==='abierta'){S.mesaActiva={...m,items:JSON.parse(JSON.stringify(m.items||[]))};await navigateTo('mesa-detail');break;}}
+      await navigateTo('mesas');break;
+    }
+    case 'mesa-sumar-carrito':{
+      const t=S.mesaAgregarTarget;
+      if(!t||S.cart.length===0)return;
+      const m=await db.mesas.get(t.id);
+      if(!m||m.status!=='abierta'){alert('Esta mesa ya fue cobrada o eliminada.');S.mesaAgregarTarget=null;await navigateTo('mesas');break;}
+      const items=Array.isArray(m.items)?JSON.parse(JSON.stringify(m.items)):[];
+      S.cart.forEach(c=>{const ex=items.find(i=>i.id==c.id);if(ex)ex.qty+=c.qty;else items.push({id:c.id,name:c.name,price:c.price,brand:c.brand||'',qty:c.qty});});
+      const total=items.reduce((a,i)=>a+i.price*i.qty,0);
+      try{await db.mesas.where('id').equals(t.id).modify({items,total});}catch(e){console.error('Error sumando a mesa',e);alert('No se pudo guardar en la mesa. Revisa tu conexión.');return;}
+      S.mesaAgregarTarget=null;
+      if(S._cartBak){S.cart=S._cartBak.cart||[];S.appliedDiscount=S._cartBak.disc||null;S._cartBak=null;}else{S.cart=[];}
+      _liloSaveCart();
+      S.mesaActiva={...m,items,total};
+      await navigateTo('mesa-detail');break;
+    }
     case 'close-mesa-agregar':
       S.mesaSearch='';S.mesaAgregarOpen=false;
       render(renderShell(renderMesaDetalle()));
@@ -4119,6 +4149,7 @@ function _isOps(u){return String(u?.name||'').normalize('NFD').replace(/[\u0300-
 const OPS_HIDDEN=['pos','mesas','mesa-detail'];
 async function navigateTo(view){
   if(_isOps(S.user)&&OPS_HIDDEN.includes(view))view='dashboard';
+  if(S.mesaAgregarTarget&&view!=='pos'){S.mesaAgregarTarget=null;if(S._cartBak){S.cart=S._cartBak.cart||[];S.appliedDiscount=S._cartBak.disc||null;S._cartBak=null;}}
   S.view=view;
   if(S.user)_liloSaveSession();
   if(view!=='pos')S.searchQuery='';
