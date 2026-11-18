@@ -487,8 +487,9 @@ input::placeholder,textarea::placeholder{color:var(--t3);}
 /* Teclado en pantalla: el recuadro se acomoda en el espacio visible arriba del teclado */
 .modal-overlay{top:0;bottom:auto;height:var(--vvh,100dvh);}
 .modal{max-height:calc(var(--vvh,100dvh) - 24px);}
-html.kb-open .modal-overlay{height:var(--avail,50dvh);align-items:center;padding-top:8px;padding-bottom:8px;}
+html.kb-open .modal-overlay{align-items:center;padding-top:8px;padding-bottom:calc(var(--vvh,100dvh) - var(--avail,50dvh) + 8px);}
 html.kb-open .modal{max-height:calc(var(--avail,50dvh) - 16px);}
+button.btn-primary:disabled,button.btn-checkout:disabled{opacity:.45;cursor:not-allowed;}
 /* Teclado de PIN a la medida de la tablet */
 .login-screen.pin-mode{height:100dvh;min-height:0;overflow:hidden;}
 .login-screen.pin-mode .login-card{max-width:400px;padding:clamp(16px,3vh,28px);}
@@ -3679,7 +3680,7 @@ async function handleClick(e){
       if(!nombre){alert('Escribe un nombre para la mesa');return;}
       try{S.mesasAbiertas=await db.mesas.where('status').equals('abierta').toArray();}catch(_){}
       const yaExiste=S.mesasAbiertas.some(m=>String(m.nombre||'').trim().toLowerCase()===nombre.toLowerCase());
-      if(yaExiste){alert(nombre+' ya está ocupada. Elige otra mesa o agrega los productos a esa mesa desde Mesas.');return;}
+      if(yaExiste){window._rocaMesaBtn();return;}
       const mesaItems=S.cart.map(i=>({...i}));
       const mesaTotal=mesaItems.reduce((s,i)=>s+i.price*i.qty,0);
       await db.mesas.add({nombre,items:mesaItems,total:mesaTotal,abierta_at:Date.now(),status:'abierta',employee:S.user?.name||''});
@@ -3894,8 +3895,7 @@ function handleInput(e){
   if(e.target.dataset.action==='mesa-nombre-input'){
     S.mesaNombreTmp=e.target.value;
     document.querySelectorAll('.btn-mesa-nombre').forEach(b=>b.classList.toggle('active',b.dataset.nombre===S.mesaNombreTmp));
-    const ob=document.querySelector('[data-action="confirmar-abrir-mesa"]');
-    if(ob)ob.disabled=!S.mesaNombreTmp.trim();
+    window._rocaMesaBtn();
     return;
   }
   if(e.target.dataset.action==='mesa-search'){
@@ -4265,6 +4265,15 @@ window.addEventListener('DOMContentLoaded',init);
 
 
 
+
+// Botón "Abrir Mesa": si el nombre escrito es de una mesa ocupada, el botón dice "Ocupada" y no deja abrirla
+window._rocaMesaBtn=function(){
+  const ob=document.querySelector('[data-action="confirmar-abrir-mesa"]');if(!ob)return;
+  const n=String(S.mesaNombreTmp||'').trim().toLowerCase();
+  const occ=!!n&&(S.mesasAbiertas||[]).some(m=>String(m.nombre||'').trim().toLowerCase()===n);
+  ob.disabled=!n||occ;
+  ob.textContent=occ?'🔴 Ocupada':'Abrir Mesa';
+};
 // Al tocar el recuadro del nombre de mesa se borra lo escrito y se quita la mesa seleccionada
 window._rocaMesaClear=function(inp){
   inp.value='';S.mesaNombreTmp='';
