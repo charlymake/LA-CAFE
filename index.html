@@ -487,6 +487,7 @@ input::placeholder,textarea::placeholder{color:var(--t3);}
 .modal-overlay{top:0;bottom:auto;height:var(--vvh,100dvh);}
 .modal{max-height:calc(var(--vvh,100dvh) - 24px);}
 html.kb-open .modal-overlay{align-items:flex-start;padding-top:12px;padding-bottom:12px;}
+html.kb-open .modal{max-height:min(calc(var(--vvh,100dvh) - 24px),calc(50dvh - 16px));}
 /* Teclado de PIN a la medida de la tablet */
 .login-screen.pin-mode{height:100dvh;min-height:0;overflow:hidden;}
 .login-screen.pin-mode .login-card{max-width:400px;padding:clamp(16px,3vh,28px);}
@@ -4240,15 +4241,17 @@ window.addEventListener('DOMContentLoaded',init);
   const upd=()=>{
     const h=vv?vv.height:window.innerHeight;
     document.documentElement.style.setProperty('--vvh',h+'px');
-    document.documentElement.classList.toggle('kb-open',(screen.height||window.outerHeight)-h>180&&!!document.activeElement&&/INPUT|TEXTAREA/.test(document.activeElement.tagName));
   };
   if(vv){vv.addEventListener('resize',upd);vv.addEventListener('scroll',upd);}
   window.addEventListener('resize',upd);upd();
+  const isText=t=>t&&(t.tagName==='TEXTAREA'||(t.tagName==='INPUT'&&!/checkbox|radio|range|button|submit/.test(t.type)));
   document.addEventListener('focusin',e=>{
-    const t=e.target;if(!t||!/INPUT|TEXTAREA|SELECT/.test(t.tagName))return;
+    const t=e.target;if(!isText(t))return;
+    // En pantalla completa Android no avisa que abrió el teclado: subimos la ventana siempre que se escribe
+    document.documentElement.classList.add('kb-open');
     setTimeout(()=>{upd();try{t.scrollIntoView({block:'center',behavior:'smooth'});}catch(_){}},300);
   });
-  document.addEventListener('focusout',()=>setTimeout(upd,300));
+  document.addEventListener('focusout',()=>setTimeout(()=>{if(!isText(document.activeElement))document.documentElement.classList.remove('kb-open');upd();},250));
 })();
 // Pantalla completa: oculta las barras de Android en la tablet.
 // El navegador solo la permite después de un toque, así que se activa con el primer toque

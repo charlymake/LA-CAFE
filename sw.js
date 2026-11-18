@@ -1,6 +1,6 @@
 // Cafetería La Roca — service worker
 // Siempre intenta traer la versión más nueva de internet; si no hay señal, usa la guardada.
-const CACHE = 'la-roca-v4';
+const CACHE = 'la-roca-v5';
 const SHELL = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -19,7 +19,7 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(req)
+    fetch(req, { cache: 'no-store' })
       .then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(req, copy));
