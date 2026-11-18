@@ -259,6 +259,7 @@ a{color:inherit;text-decoration:none;}
 .btn-cobrar-mesa:hover{opacity:.88;}
 .modal-mesa-nombres{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;padding:8px 0 16px;}
 .btn-mesa-nombre{padding:12px 20px;border-radius:var(--rsm);border:2px solid var(--border);font-size:15px;font-weight:600;background:var(--s2);transition:all .15s;}
+.btn-mesa-nombre.disabled,.btn-mesa-nombre:disabled{opacity:.45;cursor:not-allowed;pointer-events:none;border-style:dashed;}
 .btn-mesa-nombre:hover,.btn-mesa-nombre.active{border-color:var(--li);background:rgba(var(--li-rgb,.2));color:var(--li);}
 @media(min-width:541px) and (max-width:1100px){.mesas-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));}}
 @media(max-width:540px){.mesas-grid{grid-template-columns:repeat(2,1fr);}}
@@ -1417,7 +1418,7 @@ function renderAgregarProductosMesaModal(){
 }
 
 function renderAbrirMesaModal(){
-  const mesasOcupadas=(S.mesasAbiertas||[]).map(m=>m.nombre);
+  const mesasOcupadas=(S.mesasAbiertas||[]).map(m=>String(m.nombre||'').trim().toLowerCase());
   const opciones=['Mesa 1','Mesa 2','Mesa 3','Mesa 4','Mesa 5','Mesa 6'];
   return`
   <div class="modal-overlay" id="modal-overlay">
@@ -1429,7 +1430,7 @@ function renderAbrirMesaModal(){
       <div style="padding:0 20px 20px;">
         <div style="font-size:13px;color:var(--t2);margin-bottom:14px;">Selecciona o escribe el nombre de la mesa:</div>
         <div class="modal-mesa-nombres">
-          ${opciones.map(n=>{const ocupada=mesasOcupadas.includes(n);return`<button class="btn-mesa-nombre${S.mesaNombreTmp===n?' active':''}${ocupada?' disabled':''}" data-action="sel-mesa-nombre" data-nombre="${n}"${ocupada?' disabled title="Ocupada"':''}>${n}${ocupada?' 🔴':''}</button>`;}).join('')}
+          ${opciones.map(n=>{const ocupada=mesasOcupadas.includes(n.toLowerCase());return`<button class="btn-mesa-nombre${S.mesaNombreTmp===n?' active':''}${ocupada?' disabled':''}" data-action="sel-mesa-nombre" data-nombre="${n}"${ocupada?' disabled title="Ocupada"':''}>${n}${ocupada?'<span style="display:block;font-size:10px;font-weight:600;color:var(--danger);margin-top:2px;">Ocupada</span>':''}</button>`;}).join('')}
         </div>
         <input id="mesa-nombre-input" class="modal-input" type="text" onfocus="window._rocaMesaClear(this)" placeholder="Nombre personalizado…" value="${esc(S.mesaNombreTmp)}" style="margin-bottom:14px;" data-action="mesa-nombre-input" maxlength="30">
         <button class="btn-primary" style="width:100%;padding:13px;" data-action="confirmar-abrir-mesa"${!S.mesaNombreTmp.trim()?' disabled':''}>
@@ -3663,9 +3664,11 @@ async function handleClick(e){
     case 'open-abrir-mesa-modal':
       if(S.cart.length===0)return;
       S.mesaNombreTmp='';
+      try{S.mesasAbiertas=await db.mesas.where('status').equals('abierta').toArray();}catch(_){}
       render(renderShell(renderPOS())+renderAbrirMesaModal());
       bindEvents();break;
     case 'sel-mesa-nombre':
+      if(btn.disabled||btn.classList.contains('disabled'))return;
       S.mesaNombreTmp=btn.dataset.nombre||'';
       {const inp=document.getElementById('mesa-nombre-input');if(inp)inp.value=S.mesaNombreTmp;}
       {document.querySelectorAll('.btn-mesa-nombre').forEach(b=>b.classList.toggle('active',b.dataset.nombre===S.mesaNombreTmp));}
@@ -3674,8 +3677,9 @@ async function handleClick(e){
     case 'confirmar-abrir-mesa':{
       const nombre=(S.mesaNombreTmp||'').trim();
       if(!nombre){alert('Escribe un nombre para la mesa');return;}
-      const yaExiste=S.mesasAbiertas.some(m=>m.nombre===nombre);
-      if(yaExiste){alert('Ya hay una mesa con ese nombre. Elige otro.');return;}
+      try{S.mesasAbiertas=await db.mesas.where('status').equals('abierta').toArray();}catch(_){}
+      const yaExiste=S.mesasAbiertas.some(m=>String(m.nombre||'').trim().toLowerCase()===nombre.toLowerCase());
+      if(yaExiste){alert(nombre+' ya está ocupada. Elige otra mesa o agrega los productos a esa mesa desde Mesas.');return;}
       const mesaItems=S.cart.map(i=>({...i}));
       const mesaTotal=mesaItems.reduce((s,i)=>s+i.price*i.qty,0);
       await db.mesas.add({nombre,items:mesaItems,total:mesaTotal,abierta_at:Date.now(),status:'abierta',employee:S.user?.name||''});
