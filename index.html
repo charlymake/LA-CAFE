@@ -1015,6 +1015,7 @@ function renderTopbar(){
     <div class="topbar-title">${titles[S.view]||'CAFETERÍA LA ROCA'}</div>
     <div class="topbar-actions">
       ${S.shift?`<span style="font-size:12px;color:var(--ok);font-weight:500;">● Turno activo</span>`:''}
+      <button class="btn-icon roca-full-btn" onclick="window._rocaFull()" title="Pantalla completa" aria-label="Pantalla completa" style="font-size:16px;">⛶</button>
       <button class="btn-icon" data-action="switch-user" title="Volver a selección de usuario">↩ Cambiar usuario</button>
     </div>
   </div>`;
@@ -1048,6 +1049,7 @@ function renderLogin(){
     <div class="login-card${S.splashDone?' fade-in':''}">
       ${S.loginUser?renderPINPad():renderUserSelect()}
     </div>
+    <button class="roca-full-btn" onclick="window._rocaFull()" title="Pantalla completa" aria-label="Pantalla completa" style="position:fixed;top:calc(16px + env(safe-area-inset-top));left:calc(16px + env(safe-area-inset-left));width:46px;height:46px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--t2);font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:6;">⛶</button>
     ${!S.splash&&!S.loginUser&&(S.users||[]).some(_rocaIsGear)?`<button onclick="window._rocaGear()" title="Perfiles internos" aria-label="Perfiles internos" style="position:fixed;top:calc(16px + env(safe-area-inset-top));right:calc(16px + env(safe-area-inset-right));width:46px;height:46px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--t2);font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:6;">⚙️</button>
     ${S.gearOpen?`<div onclick="window._rocaGear()" style="position:fixed;inset:0;z-index:5;"></div><div style="position:fixed;top:calc(70px + env(safe-area-inset-top));right:calc(16px + env(safe-area-inset-right));z-index:6;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shlg);padding:8px;min-width:200px;display:flex;flex-direction:column;gap:6px;">${S.users.filter(_rocaIsGear).sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(u=>`<button class="user-btn" data-action="select-user" data-id="${u.id}" style="text-align:left;"><span class="user-btn-name">${esc(u.name)}</span><span class="user-btn-role">${ROLE_LABEL[u.role]||u.role}</span></button>`).join('')}</div>`:''}`:''}
     ${!S.loginUser&&window._liloInstallEvt?`<button onclick="window._liloInstall()" style="margin-top:16px;background:var(--li);color:#fff;border:none;border-radius:var(--rxs);padding:10px 18px;font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;">📲 Instalar app en este dispositivo</button>`:''}
@@ -4222,17 +4224,22 @@ async function init(){
 window.addEventListener('DOMContentLoaded',init);
 
 // Pantalla completa: oculta las barras de Android en la tablet.
-// Se activa con el primer toque (el navegador lo exige) y se recupera al volver a la app.
+// El navegador solo la permite después de un toque, así que se activa con el primer toque
+// (en fase de captura, para que ningún botón la bloquee) y también con el botón ⛶.
 (function(){
-  const isFull=()=>document.fullscreenElement||document.webkitFullscreenElement||matchMedia('(display-mode: fullscreen)').matches;
-  const go=()=>{
-    if(isFull())return;
+  const isFull=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+  window._rocaFull=function(force){
     const el=document.documentElement;
+    if(isFull()){ if(force===false){(document.exitFullscreen||document.webkitExitFullscreen).call(document);} return; }
     const req=el.requestFullscreen||el.webkitRequestFullscreen;
-    if(req){try{const r=req.call(el,{navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{});}catch(_){}}
+    if(!req)return;
+    try{const r=req.call(el,{navigationUI:'hide'});if(r&&r.catch)r.catch(e=>console.warn('Pantalla completa no disponible',e));}catch(e){}
   };
-  document.addEventListener('pointerdown',go,{passive:true});
-  document.addEventListener('touchend',go,{passive:true});
+  const auto=()=>{ if(!isFull()) window._rocaFull(); };
+  ['click','touchend','pointerup','keydown'].forEach(ev=>document.addEventListener(ev,auto,{capture:true,passive:true}));
+  const upd=()=>document.querySelectorAll('.roca-full-btn').forEach(b=>b.style.display=isFull()?'none':'flex');
+  document.addEventListener('fullscreenchange',upd);document.addEventListener('webkitfullscreenchange',upd);
+  new MutationObserver(upd).observe(document.documentElement,{childList:true,subtree:true});
 })();
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();window._liloInstallEvt=e;
