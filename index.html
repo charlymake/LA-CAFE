@@ -525,7 +525,7 @@ html,body{overscroll-behavior:none;}
   .pos-right{width:290px;}
   .brand-tabs{padding:12px 10px;gap:4px;}
   .brand-tab{padding:8px 11px!important;font-size:12px!important;}
-  .brand-tabs button[onclick*='_liloGasto']{padding:8px 11px!important;font-size:12px!important;}
+  .brand-tabs button[onclick*='_liloGasto']{padding:5px 10px!important;font-size:11px!important;}
   .product-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px;}
   .product-card{min-height:96px;}
 }
@@ -1206,7 +1206,7 @@ function renderPOS(){
       <div class="brand-tabs">
         ${[{b:'all',label:'Todos',icon:'🍽️'},...Object.entries(BRANDS).map(([b,v])=>({b,label:v.name,icon:v.icon}))].map(({b,label,icon})=>`
           <button class="brand-tab${S.brandFilter===b?' active':''}" data-action="filter-brand" data-brand="${b}">${icon} ${label}</button>`).join('')}
-        <button onclick="window._liloGasto()" style="margin-left:auto;flex-shrink:0;display:flex;align-items:center;gap:6px;border:2px solid #E8682A;color:#E8682A;background:rgba(232,104,42,.1);border-radius:50px;padding:6px 14px;font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer;white-space:nowrap;">Registrar gasto</button>
+        <button onclick="window._liloGasto()" style="margin-left:auto;flex-shrink:0;display:flex;align-items:center;gap:6px;border:2px solid #E8682A;color:#E8682A;background:rgba(232,104,42,.1);border-radius:50px;padding:5px 12px;font-size:11px;font-weight:700;font-family:var(--font);cursor:pointer;white-space:nowrap;">Gasto</button>
       </div>
       <div style="padding:8px 12px 0;flex-shrink:0;">
         <input class="form-input" type="search" placeholder="🔍 Buscar producto…" value="${esc(S.searchQuery)}" data-action="search-products" style="width:100%;font-size:13px;padding:8px 12px;">
@@ -1832,11 +1832,7 @@ window._liloGasto=async function(){
         </div>
         <div style="font-size:13px;color:var(--t2);margin:14px 0 6px;">¿En qué se gastó?</div>
         <textarea id="gasto-nota" rows="2" placeholder="Ej. 2 bolsas de hielo" style="width:100%;box-sizing:border-box;background:var(--s2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;font-size:15px;color:var(--t1);font-family:var(--font);resize:none;outline:none;"></textarea>
-        <div style="font-size:13px;color:var(--t2);margin:14px 0 6px;">¿Quién gastó?</div>
         <input type="hidden" id="gasto-marca" value="">
-        <div style="display:flex;gap:8px;">
-          ${Object.entries(BRANDS).map(([k,bv])=>`<button type="button" class="gasto-marca-btn" data-marca="${k}" data-col="${bv.hex}" onclick="window._liloGastoMarca('${k}')" style="flex:1;padding:12px 6px;border-radius:12px;border:2px solid var(--border);background:var(--s2);color:var(--t1);font-size:13px;font-weight:700;font-family:var(--font);cursor:pointer;">${bv.icon}<br>${bv.name}</button>`).join('')}
-        </div>
         <div id="gasto-err" style="color:var(--danger);font-size:13px;margin-top:8px;display:none;"></div>
         <button id="gasto-ok" onclick="window._liloGuardarGasto()" style="width:100%;margin-top:14px;background:${GASTO_COL};color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:700;font-family:var(--font);cursor:pointer;">Guardar gasto</button>
         <div style="font-size:12px;font-weight:700;letter-spacing:.07em;color:var(--t3);margin:18px 0 8px;">GASTOS DE HOY · ${fmt(tot)}</div>
@@ -1855,7 +1851,6 @@ window._liloGuardarGasto=async function(){
   if(monto<=0)return showErr('Escribe cuánto fue el gasto.');
   if(!nota)return showErr('Escribe en qué se gastó.');
   const marca=document.getElementById('gasto-marca')?.value||'';
-  if(!marca)return showErr('Elige la categoría del gasto: COMIDA, BEBIDAS o EXTRAS.');
   const btn=document.getElementById('gasto-ok');if(btn){btn.disabled=true;btn.textContent='Guardando…';}
   try{
     await db.gastos.add({monto,nota,marca,timestamp:Date.now(),employee_id:S.user?.id||null,employee_name:S.user?.name||'',shift_id:S.shift?.id||null});
@@ -1907,10 +1902,7 @@ async function renderGastos(){
     <div style="flex:1;min-width:140px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:16px;"><div style="font-size:12px;color:var(--t2);">Gastos</div><div style="font-size:28px;font-weight:800;color:var(--t1);">${list.length}</div></div>
     <div style="flex:1;min-width:140px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:16px;"><div style="font-size:12px;color:var(--t2);">Promedio por gasto</div><div style="font-size:28px;font-weight:800;color:var(--t1);">${fmt(list.length?tot/list.length:0)}</div></div>
   </div>
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
-    ${Object.entries(BRANDS).map(([k,bv])=>{const t=list.filter(g=>g.marca===k).reduce((a,g)=>a+(g.monto||0),0);const n=list.filter(g=>g.marca===k).length;return`<div style="flex:1;min-width:160px;background:var(--surface);border:1.5px solid var(--border);border-top:4px solid ${bv.hex};border-radius:var(--r);padding:12px 16px;"><div style="font-size:12px;font-weight:700;color:${bv.hex};text-transform:uppercase;">${bv.icon} ${bv.name}</div><div style="font-size:22px;font-weight:800;color:var(--t1);">${fmt(t)}</div><div style="font-size:11px;color:var(--t2);">${n} gasto${n!==1?'s':''}</div></div>`;}).join('')}
-    ${list.some(g=>!BRANDS[g.marca])?`<div style="flex:1;min-width:160px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:12px 16px;"><div style="font-size:12px;font-weight:700;color:var(--t3);">SIN MARCA</div><div style="font-size:22px;font-weight:800;color:var(--t1);">${fmt(list.filter(g=>!BRANDS[g.marca]).reduce((a,g)=>a+(g.monto||0),0))}</div><div style="font-size:11px;color:var(--t2);">registrados antes de este cambio</div></div>`:''}
-  </div>`;
+`;
   const body=list.length===0?`<div class="empty-state" style="margin-top:24px;"><div class="empty-icon">🧾</div><div class="empty-text">Sin gastos en este período</div></div>`
     :Object.keys(groups).sort().reverse().map(k=>{
       const g=groups[k];const st=g.reduce((t,x)=>t+(x.monto||0),0);
@@ -3422,7 +3414,8 @@ async function handleClick(e){
       if(!u)return;
       // Perfil OPERACIONES (o cualquier usuario sin PIN) entra directo, sin contraseña
       const _nm=String(u.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
-      if(_nm==='operaciones'||!String(u.pin||'').trim()){S.loginUser=null;S.pinBuffer='';await doLogin(u);break;}
+      // Solo entra sin PIN si el perfil no tiene PIN guardado (OPERACIONES puede ponerse uno en Usuarios)
+      if(!String(u.pin||'').trim()){S.loginUser=null;S.pinBuffer='';await doLogin(u);break;}
       S.gearOpen=false;
       S.loginUser=u;S.pinBuffer='';
       render(renderLogin());
