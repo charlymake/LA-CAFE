@@ -21,8 +21,8 @@
    TOKENS
 ═══════════════════════════════ */
 :root {
-  --aa:#B0274F; --aa-m:#3A0E1C;
-  --cr:#C25A22; --cr-m:#3A1A0A;
+  --aa:#D32F2F; --aa-m:#3A1212;
+  --cr:#1E88E5; --cr-m:#0F2A44;
   --li:#C9A24A; --li-m:#33290F;
   --bg:#0D0D0D; --surface:#171717; --sb-bg:#000000;
   --s2:#212121; --s3:#2C2C2C;
@@ -513,6 +513,7 @@ html.kb-open .modal{max-height:calc(var(--avail,50dvh) - 16px);}
 .brand-tab{min-height:42px;}
 .brand-tabs{flex-wrap:nowrap;}
 .brand-tabs>*{flex-shrink:0;}
+.brand-tabs button[onclick*='_liloGasto']{align-self:center;}
 .nav-item{min-height:46px;}
 html,body{overscroll-behavior:none;}
 *{-webkit-tap-highlight-color:transparent;}
@@ -563,8 +564,8 @@ html,body{overscroll-behavior:none;}
    CONFIG
 ══════════════════════════════════════════════ */
 const BRANDS = {
-  amor_azucar:{ name:'COMIDA', short:'CO', color:'var(--aa)', cls:'aa', pillCls:'pill-aa', icon:'🍽️', hex:'#B0274F' },
-  crepa_roll: { name:'BEBIDAS',  short:'BE', color:'var(--cr)', cls:'cr', pillCls:'pill-cr', icon:'🥤', hex:'#C25A22' },
+  amor_azucar:{ name:'COMIDA', short:'CO', color:'var(--aa)', cls:'aa', pillCls:'pill-aa', icon:'🍽️', hex:'#D32F2F' },
+  crepa_roll: { name:'BEBIDAS',  short:'BE', color:'var(--cr)', cls:'cr', pillCls:'pill-cr', icon:'🥤', hex:'#1E88E5' },
   lilo:       { name:'EXTRAS',        short:'EX', color:'var(--li)', cls:'li', pillCls:'pill-li', icon:'➕', hex:'#C9A24A' }
 };
 const PAY = {
@@ -720,7 +721,7 @@ function getRangeTs(){
   }
   return{from:dayStart(),to:n};
 }
-function avatarBg(u){const m={amor_azucar:'#C2185B',crepa_roll:'#D4511C',lilo:'#E8B84B',owner:'#5C4033',employee:'#455A64'};return m[u?.brand_affiliation]||m[u?.role]||'#5C4033';}
+function avatarBg(u){const m={amor_azucar:'#D32F2F',crepa_roll:'#1E88E5',lilo:'#E8B84B',owner:'#5C4033',employee:'#455A64'};return m[u?.brand_affiliation]||m[u?.role]||'#5C4033';}
 function calcDiscount(subtotal){
   if(!S.appliedDiscount)return 0;
   if(S.appliedDiscount.type==='percent')return Math.round(subtotal*S.appliedDiscount.value)/100;
@@ -4189,13 +4190,13 @@ function svgBarChart(data){
   labels.forEach((lbl,i)=>{
     const bx=padL+spacing+i*(bW+spacing);
     let yBot=padT+cH;
-    [[aa[i]||0,'rgba(176,39,79,.85)'],[cr[i]||0,'rgba(194,90,34,.85)'],[li[i]||0,'rgba(201,162,74,.9)']].forEach(([v,col])=>{
+    [[aa[i]||0,'rgba(211,47,47,.85)'],[cr[i]||0,'rgba(30,136,229,.85)'],[li[i]||0,'rgba(201,162,74,.9)']].forEach(([v,col])=>{
       if(v>0){const bh=Math.max(2,cH*v/maxV);yBot-=bh;bars+=`<rect x="${bx.toFixed(1)}" y="${yBot.toFixed(1)}" width="${bW}" height="${bh.toFixed(1)}" fill="${col}" rx="2"/>`;}
     });
     if(i%showEvery===0||i===n-1)xLbls+=`<text x="${(bx+bW/2).toFixed(1)}" y="${padT+cH+13}" text-anchor="middle" font-size="${n>10?8:10}" fill="#B09A94">${String(lbl).replace(/&/g,'&amp;')}</text>`;
   });
   const legY=H-18;
-  const legend=`<rect x="${padL}" y="${legY}" width="8" height="8" fill="rgba(201,162,74,.9)" rx="1"/><text x="${padL+11}" y="${legY+7}" font-size="9" fill="#7A6560">EXTRAS</text><rect x="${padL+52}" y="${legY}" width="8" height="8" fill="rgba(194,90,34,.85)" rx="1"/><text x="${padL+63}" y="${legY+7}" font-size="9" fill="#7A6560">BEBIDAS</text><rect x="${padL+112}" y="${legY}" width="8" height="8" fill="rgba(176,39,79,.85)" rx="1"/><text x="${padL+123}" y="${legY+7}" font-size="9" fill="#7A6560">COMIDA</text>`;
+  const legend=`<rect x="${padL}" y="${legY}" width="8" height="8" fill="rgba(201,162,74,.9)" rx="1"/><text x="${padL+11}" y="${legY+7}" font-size="9" fill="#7A6560">EXTRAS</text><rect x="${padL+52}" y="${legY}" width="8" height="8" fill="rgba(30,136,229,.85)" rx="1"/><text x="${padL+63}" y="${legY+7}" font-size="9" fill="#7A6560">BEBIDAS</text><rect x="${padL+112}" y="${legY}" width="8" height="8" fill="rgba(211,47,47,.85)" rx="1"/><text x="${padL+123}" y="${legY+7}" font-size="9" fill="#7A6560">COMIDA</text>`;
   return`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:210px;display:block;" xmlns="http://www.w3.org/2000/svg">${yLines}${yLbls}${bars}${xLbls}${legend}</svg>`;
 }
 
