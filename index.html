@@ -114,6 +114,7 @@ a{color:inherit;text-decoration:none;}
 .login-card{background:var(--surface);border-radius:var(--r);box-shadow:var(--shmd);padding:28px;width:100%;max-width:360px;}
 .login-hint{font-size:13px;color:var(--t2);text-align:center;margin-bottom:18px;font-weight:500;}
 .user-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.user-grid:has(> .user-btn:only-child){grid-template-columns:minmax(0,220px);justify-content:center;}
 .user-btn{
   background:var(--s2);border:1.5px solid var(--border);
   border-radius:var(--rsm);padding:16px 10px;text-align:center;
@@ -1021,17 +1022,28 @@ function renderLogin(){
     <div class="login-card${S.splashDone?' fade-in':''}">
       ${S.loginUser?renderPINPad():renderUserSelect()}
     </div>
-    ${!S.splash&&!S.loginUser&&(S.users||[]).some(_liloIsSistema)?`<button data-action="select-user" data-id="${S.users.find(_liloIsSistema).id}" title="Sistema" aria-label="Sistema" style="position:fixed;top:calc(16px + env(safe-area-inset-top));right:calc(16px + env(safe-area-inset-right));width:46px;height:46px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--t2);font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:5;">⚙️</button>`:''}
+    ${!S.splash&&!S.loginUser&&(S.users||[]).some(_rocaIsGear)?`<button onclick="window._rocaGear()" title="Perfiles internos" aria-label="Perfiles internos" style="position:fixed;top:calc(16px + env(safe-area-inset-top));right:calc(16px + env(safe-area-inset-right));width:46px;height:46px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface);color:var(--t2);font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:6;">⚙️</button>
+    ${S.gearOpen?`<div onclick="window._rocaGear()" style="position:fixed;inset:0;z-index:5;"></div><div style="position:fixed;top:calc(70px + env(safe-area-inset-top));right:calc(16px + env(safe-area-inset-right));z-index:6;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shlg);padding:8px;min-width:200px;display:flex;flex-direction:column;gap:6px;">${S.users.filter(_rocaIsGear).sort((a,b)=>String(a.name).localeCompare(String(b.name))).map(u=>`<button class="user-btn" data-action="select-user" data-id="${u.id}" style="text-align:left;"><span class="user-btn-name">${esc(u.name)}</span><span class="user-btn-role">${ROLE_LABEL[u.role]||u.role}</span></button>`).join('')}</div>`:''}`:''}
     ${!S.loginUser&&window._liloInstallEvt?`<button onclick="window._liloInstall()" style="margin-top:16px;background:var(--li);color:#fff;border:none;border-radius:var(--rxs);padding:10px 18px;font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;">📲 Instalar app en este dispositivo</button>`:''}
   </div>`;
 }
 
 function _liloIsSistema(u){return (u?.name||'').trim().toLowerCase()==='sistema';}
+function _rocaNorm(u){return String(u?.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();}
+// Perfiles que solo aparecen en la tuerca: SISTEMA(S) y OPERACIONES
+function _rocaIsGear(u){return ['sistema','sistemas','operaciones'].includes(_rocaNorm(u));}
+window._rocaGear=function(){S.gearOpen=!S.gearOpen;render(renderLogin());};
+// Renombra el perfil BARRA a VENTA (una sola vez, en la base de datos)
+async function _rocaMigrateUsers(){
+  try{
+    const b=(S.users||[]).find(u=>_rocaNorm(u)==='barra');
+    if(b){await _fs.collection('users').doc(String(b.id)).update({name:'VENTA'});b.name='VENTA';}
+  }catch(e){console.warn('No se pudo renombrar BARRA',e);}
+}
 function renderUserSelect(){
   return`
-  <p class="login-hint">¿Quién está trabajando hoy?</p>
   <div class="user-grid">
-    ${S.users.filter(u=>!_liloIsSistema(u)).map(u=>`
+    ${S.users.filter(u=>!_liloIsSistema(u)&&!_rocaIsGear(u)).map(u=>`
       <button class="user-btn" data-action="select-user" data-id="${u.id}">
         <span class="user-btn-name">${esc(u.name)}</span>
         <span class="user-btn-role">${ROLE_LABEL[u.role]||u.role}</span>
@@ -3367,6 +3379,7 @@ async function handleClick(e){
       // Perfil OPERACIONES (o cualquier usuario sin PIN) entra directo, sin contraseña
       const _nm=String(u.name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
       if(_nm==='operaciones'||!String(u.pin||'').trim()){S.loginUser=null;S.pinBuffer='';await doLogin(u);break;}
+      S.gearOpen=false;
       S.loginUser=u;S.pinBuffer='';
       render(renderLogin());
       break;
@@ -4156,6 +4169,7 @@ function svgDonutChart(payTotals){
 async function init(){
   await seedIfEmpty();
   S.users=await db.users.toArray();
+  await _rocaMigrateUsers();
   const sess=_liloReadSession();
   const su=sess&&S.users.find(u=>String(u.id)===String(sess.uid));
   if(su){
