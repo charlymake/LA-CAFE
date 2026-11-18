@@ -533,9 +533,11 @@ firebase.initializeApp({
 const _fs=firebase.firestore();
 _fs.enablePersistence({synchronizeTabs:true}).catch(()=>{});
 
+// Datos de La Roca separados de LILO: todas las colecciones llevan este prefijo
+const ROCA_NS='roca_';
 class FsCollection{
   constructor(n){this._n=n;}
-  _col(){return _fs.collection(this._n);}
+  _col(){return _fs.collection(ROCA_NS+this._n);}
   _doc(s){return s.exists?{...s.data(),id:s.id}:null;}
   _docs(s){return s.docs.map(d=>({...d.data(),id:d.id}));}
   async toArray(){return this._docs(await this._col().get());}
@@ -704,29 +706,9 @@ async function seedIfEmpty(){
   }
   if(await db.users.count()>0)return;
   await db.users.bulkAdd([
-    {name:'Mariana',  role:'owner',   pin:'1234',brand_affiliation:'amor_azucar'},
-    {name:'Socia',    role:'owner',   pin:'5678',brand_affiliation:'crepa_roll'},
-    {name:'Empleada', role:'employee',pin:'0000',brand_affiliation:null}
-  ]);
-  await db.products.bulkAdd([
-    {name:'Pastel Chocolate',   price:450,brand:'amor_azucar',stock:5,  active:1,track_stock:1},
-    {name:'Pastel Vainilla',    price:400,brand:'amor_azucar',stock:3,  active:1,track_stock:1},
-    {name:'Pastel Red Velvet',  price:480,brand:'amor_azucar',stock:2,  active:1,track_stock:1},
-    {name:'Cupcake',            price:55, brand:'amor_azucar',stock:20, active:1,track_stock:1},
-    {name:'Rebanada de Pastel', price:80, brand:'amor_azucar',stock:15, active:1,track_stock:1},
-    {name:'Mini Pastel',        price:200,brand:'amor_azucar',stock:4,  active:1,track_stock:1},
-    {name:'Crepa Nutella',      price:85, brand:'crepa_roll', stock:999,active:1,track_stock:0},
-    {name:'Crepa Frutas',       price:90, brand:'crepa_roll', stock:999,active:1,track_stock:0},
-    {name:'Crepa Cajeta',       price:80, brand:'crepa_roll', stock:999,active:1,track_stock:0},
-    {name:'Crepa Especial',     price:110,brand:'crepa_roll', stock:999,active:1,track_stock:0},
-    {name:'Crepa Salada',       price:95, brand:'crepa_roll', stock:999,active:1,track_stock:0},
-    {name:'Café Americano',     price:45, brand:'lilo',       stock:999,active:1,track_stock:0},
-    {name:'Café Latte',         price:60, brand:'lilo',       stock:999,active:1,track_stock:0},
-    {name:'Cappuccino',         price:65, brand:'lilo',       stock:999,active:1,track_stock:0},
-    {name:'Chocolate Caliente', price:55, brand:'lilo',       stock:999,active:1,track_stock:0},
-    {name:'Matcha Latte',       price:70, brand:'lilo',       stock:999,active:1,track_stock:0},
-    {name:'Agua Mineral',       price:30, brand:'lilo',       stock:50, active:1,track_stock:1},
-    {name:'Refresco',           price:35, brand:'lilo',       stock:30, active:1,track_stock:1}
+    {name:'VENTA',       role:'employee',pin:'0000',brand_affiliation:null},
+    {name:'OPERACIONES', role:'owner',   pin:'',    brand_affiliation:null},
+    {name:'Sistema',     role:'owner',   pin:'2580',brand_affiliation:null}
   ]);
 }
 
@@ -904,7 +886,7 @@ function render(html){
   _liloSaveCart();
 }
 /* ── Guardar la orden en curso por si Android cierra la app ── */
-function _liloCartKey(uid){return 'lilo_cart_'+uid;}
+function _liloCartKey(uid){return 'roca_cart_'+uid;}
 function _liloSaveCart(){
   try{
     if(!S.user||S._saving)return;
@@ -1037,7 +1019,7 @@ window._rocaGear=function(){S.gearOpen=!S.gearOpen;render(renderLogin());};
 async function _rocaMigrateUsers(){
   try{
     const b=(S.users||[]).find(u=>_rocaNorm(u)==='barra');
-    if(b){await _fs.collection('users').doc(String(b.id)).update({name:'VENTA'});b.name='VENTA';}
+    if(b){await _fs.collection(ROCA_NS+'users').doc(String(b.id)).update({name:'VENTA'});b.name='VENTA';}
   }catch(e){console.warn('No se pudo renombrar BARRA',e);}
 }
 function renderUserSelect(){
@@ -3961,20 +3943,20 @@ function setupRealtimeListeners(){
   if(window._liloUnsubs)window._liloUnsubs.forEach(u=>u());
   window._liloUnsubs=[];
   window._liloUnsubs.push(
-    _fs.collection('products').onSnapshot(snap=>{
+    _fs.collection(ROCA_NS+'products').onSnapshot(snap=>{
       const fresh=snap.docs.map(d=>({...d.data(),id:d.id}));
       S.products=['inventory','products'].includes(S.view)?fresh:fresh.filter(p=>p.active===1);
       if(S.user&&['pos','inventory','products'].includes(S.view))fullRender();
     }),
-    _fs.collection('users').onSnapshot(snap=>{
+    _fs.collection(ROCA_NS+'users').onSnapshot(snap=>{
       S.users=snap.docs.map(d=>({...d.data(),id:d.id}));
       if(S.user&&S.view==='users')fullRender();
     }),
-    _fs.collection('discounts').onSnapshot(snap=>{
+    _fs.collection(ROCA_NS+'discounts').onSnapshot(snap=>{
       S.discounts=snap.docs.map(d=>({...d.data(),id:d.id}));
       if(S.user&&S.view==='discounts')fullRender();
     }),
-    _fs.collection('mesas').where('status','==','abierta').onSnapshot(snap=>{
+    _fs.collection(ROCA_NS+'mesas').where('status','==','abierta').onSnapshot(snap=>{
       S.mesasAbiertas=snap.docs.map(d=>({...d.data(),id:d.id}));
       // Update active mesa if it changed
       if(S.mesaActiva){
@@ -4024,7 +4006,7 @@ function scheduleMidnightCorte(){
 }
 
 /* ── Mantener sesión al minimizar / reabrir ── */
-const LILO_SESSION_KEY='lilo_session';
+const LILO_SESSION_KEY='roca_session';
 const LILO_SESSION_MAX=12*3600000; // 12 horas sin usar la app
 function _liloSaveSession(){try{if(S.user)localStorage.setItem(LILO_SESSION_KEY,JSON.stringify({uid:S.user.id,view:S.view,t:Date.now()}));}catch(_){}}
 function _liloClearSession(){try{localStorage.removeItem(LILO_SESSION_KEY);}catch(_){}}
